@@ -1,0 +1,18 @@
+{
+  "specversion": "1.0",
+  "id": "bd0d5204-5865-41b0-9225-abc519354fa6",
+  "source": "/horica/claims-service",
+  "type": "claim.status.changed.v1",
+  "subject": "claims/CLM-1001",
+  "time": "2026-11-09T15:52:36.8335654+00:00",
+  "datacontenttype": "application/json",
+  "data": {
+    "claimId": "CLM-1001",
+    "customerId": "c-ana",
+    "status": "NEEDS_REVIEW",
+    "previousStatus": "SUBMITTED",
+    "reason": "Sent to an employee for review.",
+    "analysisRound": 1,
+    "changedAt": "2026-11-09T15:52:36.8335654+00:00"
+  }
+}

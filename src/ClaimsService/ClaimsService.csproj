@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>Horica.ClaimsService</AssemblyName>
+    <RootNamespace>Horica.ClaimsService</RootNamespace>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- The /// comments become the descriptions in Swagger. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);1591</NoWarn>
+  </PropertyGroup>
+
+  <!-- 10.0.* keeps every Microsoft package on .NET 10 (LTS), also once .NET 11 packages exist. -->
+  <ItemGroup>
+    <PackageReference Include="Confluent.Kafka" Version="2.*" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.*" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.*" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.*" />
+  </ItemGroup>
+
+</Project>

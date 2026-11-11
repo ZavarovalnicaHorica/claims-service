@@ -1,0 +1,135 @@
+# CI/CD for claims-service.
+#   pull request to main  → test
+#   push to main          → test, build and push the image (tag = commit SHA), deploy to staging
+#   manual run ("Run workflow" in the Actions tab) → deploy an existing image to prod
+#                           (waits for approval if the "prod" environment has required reviewers)
+#
+# Org secrets used: DOCKERHUB_USERNAME, DOCKERHUB_TOKEN, AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID.
+# Org variables used: AKS_RESOURCE_GROUP, AKS_CLUSTER_NAME.
+name: CI/CD
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Image tag (commit SHA) to deploy to prod. Empty = the commit this run starts from."
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  id-token: write   # lets azure/login get a GitHub OIDC token (no Azure password stored)
+
+env:
+  IMAGE_NAME: horica-claims-service
+  RELEASE: claims-service
+  HELM_VERSION: v4.3.1
+
+jobs:
+  test:
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Run tests
+        run: dotnet test ClaimsService.sln -c Release
+      - name: Check the Helm chart
+        run: |
+          curl -fsSL https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz | tar xz
+          for env in dev staging prod; do
+            ./linux-amd64/helm lint helm -f helm/values-$env.yaml
+          done
+
+  build:
+    needs: test
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: ./src/ClaimsService
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy-staging:
+    needs: build
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: staging
+    concurrency: deploy-staging   # one Helm upgrade at a time
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - id: aks
+        uses: azure/aks-set-context@v4
+        with:
+          resource-group: ${{ vars.AKS_RESOURCE_GROUP }}
+          cluster-name: ${{ vars.AKS_CLUSTER_NAME }}
+      - uses: azure/setup-helm@v4
+        with:
+          version: ${{ env.HELM_VERSION }}
+      - name: Deploy to staging
+        run: |
+          helm upgrade --install "$RELEASE" ./helm -n staging \
+            -f helm/values-staging.yaml \
+            --set image.repository="${{ secrets.DOCKERHUB_USERNAME }}/$IMAGE_NAME" \
+            --set image.tag="${{ github.sha }}" \
+            --wait --rollback-on-failure --timeout 5m
+      - name: Show what is running
+        if: always() && steps.aks.outcome == 'success'
+        run: kubectl get pods -n staging -l app="$RELEASE" -o wide; kubectl get httproute -n staging
+
+  deploy-prod:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: prod
+    concurrency: deploy-prod
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - id: aks
+        uses: azure/aks-set-context@v4
+        with:
+          resource-group: ${{ vars.AKS_RESOURCE_GROUP }}
+          cluster-name: ${{ vars.AKS_CLUSTER_NAME }}
+      - uses: azure/setup-helm@v4
+        with:
+          version: ${{ env.HELM_VERSION }}
+      - name: Deploy to prod
+        env:
+          TAG: ${{ inputs.tag || github.sha }}
+        run: |
+          helm upgrade --install "$RELEASE" ./helm -n prod \
+            -f helm/values-prod.yaml \
+            --set image.repository="${{ secrets.DOCKERHUB_USERNAME }}/$IMAGE_NAME" \
+            --set image.tag="$TAG" \
+            --wait --rollback-on-failure --timeout 5m
+      - name: Show what is running
+        if: always() && steps.aks.outcome == 'success'
+        run: kubectl get pods -n prod -l app="$RELEASE" -o wide; kubectl get httproute -n prod

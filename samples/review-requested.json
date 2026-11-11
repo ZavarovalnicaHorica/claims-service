@@ -1,0 +1,32 @@
+{
+  "specversion": "1.0",
+  "id": "0f324133-c2c8-43f0-b632-9b7ff9db36b7",
+  "source": "/horica/claims-service",
+  "type": "review.requested.v1",
+  "subject": "claims/CLM-1001",
+  "time": "2026-11-09T15:52:36.8335654+00:00",
+  "datacontenttype": "application/json",
+  "data": {
+    "claimId": "CLM-1001",
+    "policyId": "POL-1001",
+    "policyNumber": "POL-1001",
+    "customerId": "c-ana",
+    "claimedAmount": 1200.0,
+    "currency": "EUR",
+    "riskScore": 0.45,
+    "riskReasons": [
+      "Amount is 6 % of the policy limit",
+      "Amount 1.200 € is above the auto-approval limit of 300 €.",
+      "Risk score 0.45 is above 0.20.",
+      "An agent flagged the claim for a person."
+    ],
+    "reviewReasons": [
+      "Amount 1.200 € is above the auto-approval limit of 300 €.",
+      "Risk score 0.45 is above 0.20.",
+      "An agent flagged the claim for a person."
+    ],
+    "recommendation": "APPROVE",
+    "summary": "Policy valid, photo and accident report attached. Amount exceeds the automatic limit.",
+    "analysisRound": 1
+  }
+}

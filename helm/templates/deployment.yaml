@@ -1,0 +1,101 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.name }}
+  labels:
+    app: {{ .Values.name }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.name }}
+    spec:
+      containers:
+        - name: {{ .Values.name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.port }}
+          # appsettings.json keys, with "__" instead of ":".
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: {{ .Values.environment | quote }}
+            - name: ASPNETCORE_URLS
+              value: "http://+:{{ .Values.port }}"
+            - name: Auth__Mode
+              value: {{ .Values.auth.mode | quote }}
+            {{- if ne .Values.auth.mode "Disabled" }}
+            - name: Auth__Authority
+              value: {{ .Values.auth.authority | quote }}
+            - name: Auth__RequireHttpsMetadata
+              value: {{ .Values.auth.requireHttpsMetadata | quote }}
+            - name: Auth__CustomerRoles
+              value: {{ .Values.auth.customerRoles | quote }}
+            - name: Auth__StaffRoles
+              value: {{ .Values.auth.staffRoles | quote }}
+            - name: Auth__ManagerRoles
+              value: {{ .Values.auth.managerRoles | quote }}
+            {{- end }}
+            # The Secret is created by hand per namespace (see values.yaml).
+            - name: ConnectionStrings__ClaimsDb
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.secretName }}
+                  key: DB_CONNECTION_STRING
+            - name: Kafka__Enabled
+              value: {{ .Values.kafka.enabled | quote }}
+            {{- if .Values.kafka.enabled }}
+            - name: Kafka__BootstrapServers
+              value: {{ required "kafka.bootstrapServers is required when kafka.enabled is true" .Values.kafka.bootstrapServers | quote }}
+            {{- end }}
+            {{- $prefix := .Values.kafka.topicPrefix | default "" }}
+            - name: Kafka__ConsumerGroupId
+              value: {{ printf "%sclaims-service" $prefix | quote }}
+            - name: Kafka__ClaimSubmittedTopic
+              value: {{ printf "%sclaim.submitted.v1" $prefix | quote }}
+            - name: Kafka__ClaimStatusChangedTopic
+              value: {{ printf "%sclaim.status.changed.v1" $prefix | quote }}
+            - name: Kafka__ReviewRequestedTopic
+              value: {{ printf "%sreview.requested.v1" $prefix | quote }}
+            - name: Kafka__RecommendationCreatedTopic
+              value: {{ printf "%sclaim.recommendation.created.v1" $prefix | quote }}
+            - name: Kafka__ReviewCompletedTopic
+              value: {{ printf "%sreview.completed.v1" $prefix | quote }}
+            - name: Kafka__DocumentAddedTopic
+              value: {{ printf "%sdocument.added.v1" $prefix | quote }}
+            # Workstation GC: less memory per pod than server GC, enough for this load.
+            - name: DOTNET_gcServer
+              value: "0"
+            - name: Policies__BaseUrl
+              value: {{ .Values.policies.baseUrl | quote }}
+            - name: AutoApproval__Enabled
+              value: {{ .Values.autoApproval.enabled | quote }}
+            - name: AutoApproval__MaxAmount
+              value: {{ .Values.autoApproval.maxAmount | quote }}
+            - name: AutoApproval__MaxRiskScore
+              value: {{ .Values.autoApproval.maxRiskScore | quote }}
+            - name: Swagger__Enabled
+              value: {{ .Values.swagger.enabled | quote }}
+          # Startup waits for PostgreSQL (up to ~60 s) before the app listens.
+          startupProbe:
+            httpGet:
+              path: /health/live
+              port: {{ .Values.port }}
+            periodSeconds: 5
+            failureThreshold: 24
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: {{ .Values.port }}
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: {{ .Values.port }}
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

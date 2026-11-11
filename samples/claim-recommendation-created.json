@@ -1,0 +1,23 @@
+{
+  "specversion": "1.0",
+  "id": "8d1f5a2e-7b1c-4c55-9a0e-2f9d7c1b6e01",
+  "source": "/horica/agent-service",
+  "type": "claim.recommendation.created.v1",
+  "subject": "claims/CLM-1001",
+  "time": "2026-11-07T10:05:00Z",
+  "datacontenttype": "application/json",
+  "data": {
+    "claimId": "CLM-1001",
+    "analysisRound": 1,
+    "recommendation": "APPROVE",
+    "summary": "Policy valid, photo and accident report attached. Amount exceeds the automatic limit.",
+    "riskScore": 0.45,
+    "riskReasons": [ "Amount is 6 % of the policy limit" ],
+    "policyValid": true,
+    "documentsComplete": true,
+    "agents": [
+      { "agent": "Data agent", "outcome": "PASS", "note": "Policy POL-1001 (Car insurance) is valid. 2 document(s) collected." },
+      { "agent": "Recommendation agent", "outcome": "FLAG", "note": "Needs an employee: amount is above 300 €." }
+    ]
+  }
+}

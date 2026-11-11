@@ -1,0 +1,28 @@
+{
+  "specversion": "1.0",
+  "id": "b2f083c1-7999-4e54-a59a-7e007a47a51f",
+  "source": "/horica/claims-service",
+  "type": "claim.submitted.v1",
+  "subject": "claims/CLM-1001",
+  "time": "2026-11-09T15:52:00.7905326+00:00",
+  "datacontenttype": "application/json",
+  "data": {
+    "claimId": "CLM-1001",
+    "policyNumber": "POL-1001",
+    "policyId": "POL-1001",
+    "customerId": "c-ana",
+    "claimant": "ana",
+    "type": "CAR",
+    "incidentDate": "2026-11-01",
+    "claimedAmount": 1200,
+    "currency": "EUR",
+    "description": "Another driver reversed into my parked car. Rear bumper dented.",
+    "documents": [
+      "damage-photo-rear.jpg",
+      "european-accident-report.pdf"
+    ],
+    "analysisRound": 1,
+    "reanalysis": false,
+    "submittedAt": "2026-11-09T15:52:00.7905326+00:00"
+  }
+}

@@ -1,0 +1,14 @@
+# AKS, namespace "prod": deployed by a manual workflow run, with the image already tested in staging.
+# Database: Azure PostgreSQL, database claims_prod (Secret db-claims in namespace prod).
+image:
+  pullPolicy: IfNotPresent
+kafka:
+  enabled: true
+  bootstrapServers: horica-kafka-kafka-bootstrap.kafka:9092
+  topicPrefix: "prod."
+resources:
+  requests:
+    cpu: 100m
+    memory: 192Mi
+  limits:
+    memory: 384Mi

@@ -1,0 +1,6 @@
+apiVersion: v2
+name: claims-service
+description: Zavarovalnica Horica claims-service (claims, their status and handling history)
+type: application
+version: 0.1.0        # version of this chart
+appVersion: "0.0.1"   # version of the app (the image tag is set per deploy)

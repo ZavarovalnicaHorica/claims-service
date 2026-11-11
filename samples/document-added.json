@@ -1,0 +1,16 @@
+{
+  "specversion": "1.0",
+  "id": "3c6a9b0d-1e2f-4a5b-8c7d-9e0f1a2b3c4d",
+  "source": "/horica/document-service",
+  "type": "document.added.v1",
+  "subject": "claims/CLM-1001",
+  "time": "2026-11-08T09:00:00Z",
+  "datacontenttype": "application/json",
+  "data": {
+    "claimId": "CLM-1001",
+    "documentId": "doc-7f3a",
+    "name": "repair-estimate.pdf",
+    "uploadedById": "c-ana",
+    "uploadedAt": "2026-11-08T09:00:00Z"
+  }
+}

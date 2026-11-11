@@ -1,0 +1,10 @@
+# Local cluster (minikube / kind): image built and loaded locally, no login, Swagger on.
+# Still needs PostgreSQL: create the db-claims Secret pointing at it (see values.yaml).
+image:
+  repository: claims-service
+  tag: dev
+environment: Development
+auth:
+  mode: Disabled
+swagger:
+  enabled: true

@@ -1,0 +1,94 @@
+# Works in Visual Studio 2022 (17.8+) and in VS Code (REST Client extension).
+# Start the service first (docker compose up --build  OR  dotnet run --project src/ClaimsService).
+# Auth:Mode=Disabled: X-Dev-User / X-Dev-Roles choose who you are (default dev-user with CLIENT,ADMIN).
+
+@host = http://localhost:5081
+
+### Health (is the database reachable?)
+GET {{host}}/health/ready
+
+### 1) A customer submits a claim (UC-2). Status SUBMITTED, claim.submitted.v1 is published.
+POST {{host}}/claims
+Content-Type: application/json
+X-Dev-User: c-ana
+X-Dev-Roles: CLIENT
+X-Dev-Email: ana@horica.test
+
+{
+  "policyNumber": "POL-1001",
+  "incidentDate": "2026-11-01",
+  "amount": 1200.00,
+  "description": "Another driver reversed into my parked car. Rear bumper dented.",
+  "documents": ["damage-photo-rear.jpg", "european-accident-report.pdf"],
+  "type": "CAR"
+}
+
+### 2) The customer's claims (only their own)
+GET {{host}}/claims
+X-Dev-User: c-ana
+X-Dev-Roles: CLIENT
+
+### 3) One claim (replace the id with the one returned above)
+GET {{host}}/claims/CLM-1001
+X-Dev-User: c-ana
+X-Dev-Roles: CLIENT
+
+### 4) Pretend AgentService answered (Development only). 1.200 € > 300 € -> NEEDS_REVIEW, review.requested.v1
+POST {{host}}/dev/claims/CLM-1001/recommendation
+Content-Type: application/json
+X-Dev-Roles: REVIEWER
+
+{
+  "recommendation": "APPROVE",
+  "summary": "Policy valid, photo and accident report attached. Amount is above the automatic limit.",
+  "riskScore": 0.45,
+  "riskReasons": ["Amount is 6 % of the policy limit"],
+  "policyValid": true,
+  "documentsComplete": true
+}
+
+### 5) Pretend ReviewService answered (Development only): Approved | Rejected | NeedsMoreInfo
+POST {{host}}/dev/claims/CLM-1001/review-completed
+Content-Type: application/json
+X-Dev-Roles: REVIEWER
+
+{
+  "decision": "NeedsMoreInfo",
+  "reason": "Please add the repair shop's estimate.",
+  "reviewerName": "marko"
+}
+
+### 6) Pretend DocumentService answered (Development only). On NEEDS_INFO this starts a re-analysis (UC-7).
+POST {{host}}/dev/claims/CLM-1001/documents
+Content-Type: application/json
+X-Dev-Roles: REVIEWER
+
+{
+  "names": ["repair-estimate.pdf"]
+}
+
+### 7) Employees: every claim, or only those waiting for a review
+GET {{host}}/claims?status=NEEDS_REVIEW
+X-Dev-Roles: REVIEWER
+
+### 8) History of one claim (customers see fewer entries than employees)
+GET {{host}}/claims/CLM-1001/history
+X-Dev-Roles: REVIEWER
+
+### 9) Managers: the audit log of every claim (UC-8)
+GET {{host}}/claims/history
+X-Dev-Roles: ADMIN
+
+### A small claim with documents is approved automatically after the recommendation
+POST {{host}}/claims
+Content-Type: application/json
+X-Dev-User: c-ana
+X-Dev-Roles: CLIENT
+
+{
+  "policyNumber": "POL-1001",
+  "incidentDate": "2026-11-05",
+  "amount": 180,
+  "description": "Small stone chip in the windscreen, repaired at a glass service.",
+  "documents": ["windscreen-photo.jpg", "glass-repair-invoice.pdf"]
+}

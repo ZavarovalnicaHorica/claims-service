@@ -1,0 +1,8 @@
+# AKS, namespace "staging": deployed automatically on every push to main.
+# Database: Azure PostgreSQL, database claims_staging (Secret db-claims in namespace staging).
+image:
+  pullPolicy: IfNotPresent   # tags are commit SHAs, so a tag never changes
+kafka:
+  enabled: true
+  bootstrapServers: horica-kafka-kafka-bootstrap.kafka:9092
+  topicPrefix: "staging."

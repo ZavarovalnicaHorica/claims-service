@@ -1,0 +1,70 @@
+# Default settings. values-dev.yaml / values-staging.yaml / values-prod.yaml override them,
+# and CI overrides image.repository and image.tag with --set.
+
+# Name of the Deployment, Service and HTTPRoute. Other services reach claims-service by it.
+name: claims-service
+
+replicaCount: 1
+
+image:
+  repository: claims-service        # CI: <dockerhub-user>/horica-claims-service
+  tag: dev                          # CI: the commit SHA
+  pullPolicy: IfNotPresent
+
+port: 8080
+
+# ASPNETCORE_ENVIRONMENT. "Development" allows auth.mode Disabled and turns Swagger and /dev/... on.
+environment: Production
+
+auth:
+  # "Jwt" = check tokens from auth-service, "Disabled" = fake user (only with environment Development).
+  mode: Jwt
+  # auth-service's issuer: its discovery document and keys are under <authority>/.well-known/.
+  authority: http://auth-service:8081
+  requireHttpsMetadata: false       # in-cluster plain HTTP
+  # auth-service puts the role in the "roles" claim as the enum name (compared case-insensitively).
+  customerRoles: CLIENT
+  staffRoles: AGENT,REVIEWER,ADMIN
+  managerRoles: ADMIN
+
+database:
+  # Secret with key DB_CONNECTION_STRING (Npgsql format). Created by hand per namespace, e.g.
+  #   kubectl -n staging create secret generic db-claims --from-literal=DB_CONNECTION_STRING=\
+  #     "Host=<server>.postgres.database.azure.com;Port=5432;Database=claims_staging;Username=<user>;Password=<password>;Ssl Mode=Require"
+  # The tables are created on startup. Use a database of its own (not shared with another service).
+  secretName: db-claims
+
+kafka:
+  # Off: events stay in the outbox table and are sent once Kafka is turned on.
+  # values-staging.yaml / values-prod.yaml turn it on (Strimzi cluster "horica-kafka" in namespace "kafka").
+  enabled: false
+  bootstrapServers: ""              # e.g. horica-kafka-kafka-bootstrap.kafka:9092
+  # Put in front of every topic and of the consumer group, so staging and prod can share one Kafka
+  # without reading each other's events: "staging." -> staging.claim.submitted.v1
+  topicPrefix: ""
+
+policies:
+  # PolicyService base URL, e.g. http://policy-service:8080. Empty = policies are not looked up.
+  baseUrl: ""
+
+autoApproval:
+  # From the project plan: valid policy, complete documents, amount up to 300 EUR, risk score up to 0.20.
+  enabled: true
+  maxAmount: "300"
+  maxRiskScore: "0.20"
+
+swagger:
+  enabled: false
+
+route:
+  enabled: true
+  gateway: horica-gateway   # the Gateway in the same namespace
+  pathPrefix: /api/claims   # what the browser calls ...
+  rewritePrefix: /claims    # ... and what claims-service receives
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    memory: 256Mi
